@@ -1,161 +1,297 @@
-import React, { useState, createContext, useContext, useReducer } from 'react';
+import React, { useState, createContext, useContext } from 'react';
 import { Provider } from 'react-redux';
 import { createStore } from 'redux';
 import './App.css';
 
-// ==================== REDUX SETUP ====================
-// Redux Action Types
-const INCREMENT_COUNTER = 'INCREMENT_COUNTER';
-const DECREMENT_COUNTER = 'DECREMENT_COUNTER';
-const ADD_TODO = 'ADD_TODO';
-const TOGGLE_TODO = 'TOGGLE_TODO';
-const DELETE_TODO = 'DELETE_TODO';
+// ==================== REDUX SETUP (Global Theme State) ====================
+const TOGGLE_THEME = 'TOGGLE_THEME';
 
-// Redux Action Creators
-const incrementCounter = () => ({ type: INCREMENT_COUNTER });
-const decrementCounter = () => ({ type: DECREMENT_COUNTER });
-const addTodo = (text) => ({ type: ADD_TODO, payload: text });
-const toggleTodo = (id) => ({ type: TOGGLE_TODO, payload: id });
-const deleteTodo = (id) => ({ type: DELETE_TODO, payload: id });
+const toggleTheme = () => ({ type: TOGGLE_THEME });
 
-// Redux Reducer
 const initialReduxState = {
-  counter: 0,
-  todos: []
+  theme: 'light'
 };
 
 function rootReducer(state = initialReduxState, action) {
   switch (action.type) {
-    case INCREMENT_COUNTER:
-      return { ...state, counter: state.counter + 1 };
-    case DECREMENT_COUNTER:
-      return { ...state, counter: state.counter - 1 };
-    case ADD_TODO:
+    case TOGGLE_THEME:
       return {
         ...state,
-        todos: [...state.todos, { id: Date.now(), text: action.payload, completed: false }]
-      };
-    case TOGGLE_TODO:
-      return {
-        ...state,
-        todos: state.todos.map(todo =>
-          todo.id === action.payload ? { ...todo, completed: !todo.completed } : todo
-        )
-      };
-    case DELETE_TODO:
-      return {
-        ...state,
-        todos: state.todos.filter(todo => todo.id !== action.payload)
+        theme: state.theme === 'light' ? 'dark' : 'light'
       };
     default:
       return state;
   }
 }
 
-// Create Redux Store
 const store = createStore(rootReducer);
 
-// ==================== CONTEXT API SETUP ====================
-// Theme Context
-const ThemeContext = createContext();
+// ==================== CONTEXT API SETUP (Shared Visibility States) ====================
+// List A Context - shared visibility state
+const ListAContext = createContext();
 
-function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState('light');
-  
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
-  };
+function ListAProvider({ children }) {
+  const [showItems, setShowItems] = useState(true);
   
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ListAContext.Provider value={{ showItems, setShowItems }}>
       {children}
-    </ThemeContext.Provider>
+    </ListAContext.Provider>
   );
 }
 
-// User Context with useReducer
-const UserContext = createContext();
+// List B Context - shared visibility state
+const ListBContext = createContext();
 
-const userReducer = (state, action) => {
-  switch (action.type) {
-    case 'SET_USER':
-      return { ...state, name: action.payload.name, email: action.payload.email };
-    case 'CLEAR_USER':
-      return { name: '', email: '' };
-    default:
-      return state;
-  }
-};
-
-function UserProvider({ children }) {
-  const [user, dispatch] = useReducer(userReducer, { name: '', email: '' });
+function ListBProvider({ children }) {
+  const [showItems, setShowItems] = useState(true);
   
   return (
-    <UserContext.Provider value={{ user, dispatch }}>
+    <ListBContext.Provider value={{ showItems, setShowItems }}>
       {children}
-    </UserContext.Provider>
+    </ListBContext.Provider>
   );
 }
 
 // ==================== COMPONENTS ====================
 
-// Component using LOCAL STATE (useState)
-function LocalStateComponent() {
-  const [inputValue, setInputValue] = useState('');
-  const [items, setItems] = useState([]);
-  const [showItems, setShowItems] = useState(true);
+// Individual Todo Item with LOCAL STATE for completion
+function TodoItem({ text, onDelete }) {
+  const [completed, setCompleted] = useState(false);
   
-  const addItem = () => {
-    if (inputValue.trim()) {
-      setItems([...items, { id: Date.now(), text: inputValue }]);
-      setInputValue('');
+  return (
+    <div className={`todo-item ${completed ? 'completed' : ''}`}>
+      <input
+        type="checkbox"
+        checked={completed}
+        onChange={() => setCompleted(!completed)}
+        className="todo-checkbox"
+      />
+      <span className="todo-text">{text}</span>
+      <button onClick={onDelete} className="btn-delete">×</button>
+    </div>
+  );
+}
+
+// List A - Component 1 (uses shared Context API visibility state)
+function ListAComponent1() {
+  const { showItems } = useContext(ListAContext);
+  
+  return (
+    <div className="list-component">
+      <h3>Component A1</h3>
+      <p className="component-note">Visibility controlled by Context A</p>
+      {showItems && (
+        <div className="component-content">
+          <p>✓ This component is visible</p>
+          <p>🔗 Shares visibility state with A2 and A3</p>
+        </div>
+      )}
+      {!showItems && <p className="hidden-message">Hidden by Context A</p>}
+    </div>
+  );
+}
+
+// List A - Component 2
+function ListAComponent2() {
+  const { showItems } = useContext(ListAContext);
+  
+  return (
+    <div className="list-component">
+      <h3>Component A2</h3>
+      <p className="component-note">Visibility controlled by Context A</p>
+      {showItems && (
+        <div className="component-content">
+          <p>✓ This component is visible</p>
+          <p>🔗 Shares visibility state with A1 and A3</p>
+        </div>
+      )}
+      {!showItems && <p className="hidden-message">Hidden by Context A</p>}
+    </div>
+  );
+}
+
+// List A - Component 3
+function ListAComponent3() {
+  const { showItems } = useContext(ListAContext);
+  
+  return (
+    <div className="list-component">
+      <h3>Component A3</h3>
+      <p className="component-note">Visibility controlled by Context A</p>
+      {showItems && (
+        <div className="component-content">
+          <p>✓ This component is visible</p>
+          <p>🔗 Shares visibility state with A1 and A2</p>
+        </div>
+      )}
+      {!showItems && <p className="hidden-message">Hidden by Context A</p>}
+    </div>
+  );
+}
+
+// List B - Component 1 (uses shared Context API visibility state)
+function ListBComponent1() {
+  const { showItems } = useContext(ListBContext);
+  
+  return (
+    <div className="list-component">
+      <h3>Component B1</h3>
+      <p className="component-note">Visibility controlled by Context B</p>
+      {showItems && (
+        <div className="component-content">
+          <p>✓ This component is visible</p>
+          <p>🔗 Shares visibility state with B2 and B3</p>
+        </div>
+      )}
+      {!showItems && <p className="hidden-message">Hidden by Context B</p>}
+    </div>
+  );
+}
+
+// List B - Component 2
+function ListBComponent2() {
+  const { showItems } = useContext(ListBContext);
+  
+  return (
+    <div className="list-component">
+      <h3>Component B2</h3>
+      <p className="component-note">Visibility controlled by Context B</p>
+      {showItems && (
+        <div className="component-content">
+          <p>✓ This component is visible</p>
+          <p>🔗 Shares visibility state with B1 and B3</p>
+        </div>
+      )}
+      {!showItems && <p className="hidden-message">Hidden by Context B</p>}
+    </div>
+  );
+}
+
+// List B - Component 3
+function ListBComponent3() {
+  const { showItems } = useContext(ListBContext);
+  
+  return (
+    <div className="list-component">
+      <h3>Component B3</h3>
+      <p className="component-note">Visibility controlled by Context B</p>
+      {showItems && (
+        <div className="component-content">
+          <p>✓ This component is visible</p>
+          <p>🔗 Shares visibility state with B1 and B2</p>
+        </div>
+      )}
+      {!showItems && <p className="hidden-message">Hidden by Context B</p>}
+    </div>
+  );
+}
+
+// Context A Controller
+function ListAController() {
+  const { showItems, setShowItems } = useContext(ListAContext);
+  
+  return (
+    <div className="context-controller context-a">
+      <div className="card-header">
+        <h2>Context API - Group A</h2>
+        <p className="subtitle">Shared visibility state across A1, A2, A3</p>
+      </div>
+      <button 
+        onClick={() => setShowItems(!showItems)} 
+        className="btn btn-context-a"
+      >
+        {showItems ? 'Hide' : 'Show'} All A Components
+      </button>
+      <div className="components-container">
+        <ListAComponent1 />
+        <ListAComponent2 />
+        <ListAComponent3 />
+      </div>
+    </div>
+  );
+}
+
+// Context B Controller
+function ListBController() {
+  const { showItems, setShowItems } = useContext(ListBContext);
+  
+  return (
+    <div className="context-controller context-b">
+      <div className="card-header">
+        <h2>Context API - Group B</h2>
+        <p className="subtitle">Shared visibility state across B1, B2, B3</p>
+      </div>
+      <button 
+        onClick={() => setShowItems(!showItems)} 
+        className="btn btn-context-b"
+      >
+        {showItems ? 'Hide' : 'Show'} All B Components
+      </button>
+      <div className="components-container">
+        <ListBComponent1 />
+        <ListBComponent2 />
+        <ListBComponent3 />
+      </div>
+    </div>
+  );
+}
+
+// Local State Component (Todo List)
+function LocalStateTodos() {
+  const [todoInput, setTodoInput] = useState('');
+  const [todos, setTodos] = useState([
+    { id: 1, text: 'Buy groceries' },
+    { id: 2, text: 'Walk the dog' },
+    { id: 3, text: 'Read a book' }
+  ]);
+  
+  const addTodo = () => {
+    if (todoInput.trim()) {
+      setTodos([...todos, { id: Date.now(), text: todoInput }]);
+      setTodoInput('');
     }
   };
   
-  const removeItem = (id) => {
-    setItems(items.filter(item => item.id !== id));
+  const deleteTodo = (id) => {
+    setTodos(todos.filter(todo => todo.id !== id));
   };
   
   return (
-    <div className="component-card local-state">
+    <div className="local-state-section">
       <div className="card-header">
-        <h2>📌 Local State (useState)</h2>
-        <p className="subtitle">State lives within this component only</p>
+        <h2>Local State - Independent Todos</h2>
+        <p className="subtitle">Each todo manages its own completion state</p>
       </div>
       
       <div className="input-group">
         <input
           type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && addItem()}
-          placeholder="Add an item..."
+          value={todoInput}
+          onChange={(e) => setTodoInput(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && addTodo()}
+          placeholder="Add a new todo..."
           className="input-field"
         />
-        <button onClick={addItem} className="btn btn-primary">Add</button>
-        <button onClick={() => setShowItems(!showItems)} className="btn btn-secondary">
-          {showItems ? 'Hide' : 'Show'} Items
-        </button>
+        <button onClick={addTodo} className="btn btn-primary">Add Todo</button>
       </div>
       
-      {showItems && (
-        <div className="items-list">
-          <p className="count-badge">{items.length} items</p>
-          {items.map(item => (
-            <div key={item.id} className="item">
-              <span>{item.text}</span>
-              <button onClick={() => removeItem(item.id)} className="btn-delete">×</button>
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="todos-list">
+        <p className="count-badge">{todos.length} todos</p>
+        {todos.map(todo => (
+          <TodoItem
+            key={todo.id}
+            text={todo.text}
+            onDelete={() => deleteTodo(todo.id)}
+          />
+        ))}
+      </div>
     </div>
   );
 }
 
-// Component using REDUX
-function ReduxComponent() {
-  const [todoInput, setTodoInput] = useState('');
+// Global State Component (Redux Theme)
+function GlobalThemeController() {
   const [reduxState, setReduxState] = useState(store.getState());
   
   React.useEffect(() => {
@@ -165,120 +301,25 @@ function ReduxComponent() {
     return unsubscribe;
   }, []);
   
-  const handleAddTodo = () => {
-    if (todoInput.trim()) {
-      store.dispatch(addTodo(todoInput));
-      setTodoInput('');
-    }
-  };
-  
   return (
-    <div className="component-card redux-state">
+    <div className="global-state-section">
       <div className="card-header">
-        <h2>🔴 Redux Global State</h2>
-        <p className="subtitle">Centralized state with predictable updates</p>
+        <h2>Redux Global State - Theme</h2>
+        <p className="subtitle">Single source of truth for entire application</p>
       </div>
       
-      <div className="counter-section">
-        <h3>Counter: {reduxState.counter}</h3>
-        <div className="button-group">
-          <button onClick={() => store.dispatch(incrementCounter())} className="btn btn-success">
-            + Increment
-          </button>
-          <button onClick={() => store.dispatch(decrementCounter())} className="btn btn-danger">
-            - Decrement
-          </button>
+      <div className="theme-display">
+        <div className="theme-indicator">
+          <span className="theme-icon">{reduxState.theme === 'light' ? '☀️' : '🌙'}</span>
+          <h3>Current Theme: <span className="theme-badge">{reduxState.theme}</span></h3>
         </div>
-      </div>
-      
-      <div className="input-group">
-        <input
-          type="text"
-          value={todoInput}
-          onChange={(e) => setTodoInput(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && handleAddTodo()}
-          placeholder="Add a Redux todo..."
-          className="input-field"
-        />
-        <button onClick={handleAddTodo} className="btn btn-primary">Add Todo</button>
-      </div>
-      
-      <div className="items-list">
-        <p className="count-badge">{reduxState.todos.length} todos</p>
-        {reduxState.todos.map(todo => (
-          <div key={todo.id} className={`item ${todo.completed ? 'completed' : ''}`}>
-            <input
-              type="checkbox"
-              checked={todo.completed}
-              onChange={() => store.dispatch(toggleTodo(todo.id))}
-            />
-            <span>{todo.text}</span>
-            <button onClick={() => store.dispatch(deleteTodo(todo.id))} className="btn-delete">×</button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Component using CONTEXT API
-function ContextComponent() {
-  const { theme, toggleTheme } = useContext(ThemeContext);
-  const { user, dispatch } = useContext(UserContext);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  
-  const handleSetUser = () => {
-    if (name.trim() && email.trim()) {
-      dispatch({ type: 'SET_USER', payload: { name, email } });
-      setName('');
-      setEmail('');
-    }
-  };
-  
-  return (
-    <div className="component-card context-state">
-      <div className="card-header">
-        <h2>🌐 Context API Global State</h2>
-        <p className="subtitle">Shared state without prop drilling</p>
-      </div>
-      
-      <div className="theme-section">
-        <h3>Current Theme: <span className="theme-badge">{theme}</span></h3>
-        <button onClick={toggleTheme} className="btn btn-accent">
-          Switch to {theme === 'light' ? 'Dark' : 'Light'} Mode
+        <button 
+          onClick={() => store.dispatch(toggleTheme())} 
+          className="btn btn-theme"
+        >
+          Switch to {reduxState.theme === 'light' ? 'Dark' : 'Light'} Mode
         </button>
-      </div>
-      
-      <div className="user-section">
-        <h3>User Profile</h3>
-        {user.name ? (
-          <div className="user-info">
-            <p><strong>Name:</strong> {user.name}</p>
-            <p><strong>Email:</strong> {user.email}</p>
-            <button onClick={() => dispatch({ type: 'CLEAR_USER' })} className="btn btn-danger">
-              Clear User
-            </button>
-          </div>
-        ) : (
-          <div className="input-group vertical">
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter name..."
-              className="input-field"
-            />
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter email..."
-              className="input-field"
-            />
-            <button onClick={handleSetUser} className="btn btn-primary">Set User</button>
-          </div>
-        )}
+        <p className="theme-note">This theme affects the entire application</p>
       </div>
     </div>
   );
@@ -286,34 +327,57 @@ function ContextComponent() {
 
 // Main App Component
 function App() {
-  const { theme } = useContext(ThemeContext);
+  const [reduxState, setReduxState] = useState(store.getState());
+  
+  React.useEffect(() => {
+    const unsubscribe = store.subscribe(() => {
+      setReduxState(store.getState());
+    });
+    return unsubscribe;
+  }, []);
   
   return (
-    <div className={`app ${theme}`}>
+    <div className={`app ${reduxState.theme}`}>
       <header className="app-header">
-        <h1>State Management Comparison</h1>
-        <p className="header-subtitle">Redux • Context API • Local State</p>
+        <h1>State Management Architecture</h1>
+        <p className="header-subtitle">Understanding Redux • Context API • Local State</p>
       </header>
       
-      <div className="info-section">
-        <div className="info-card">
-          <h3>🎯 Experiment Overview</h3>
-          <ul>
-            <li><strong>Local State:</strong> Component-specific data using useState</li>
-            <li><strong>Context API:</strong> Shared state across components (theme, user)</li>
-            <li><strong>Redux:</strong> Centralized global state with predictable actions</li>
-          </ul>
+      <div className="main-layout">
+        <div className="top-section">
+          <GlobalThemeController />
+        </div>
+        
+        <div className="middle-section">
+          <ListAProvider>
+            <ListAController />
+          </ListAProvider>
+          
+          <ListBProvider>
+            <ListBController />
+          </ListBProvider>
+        </div>
+        
+        <div className="bottom-section">
+          <LocalStateTodos />
         </div>
       </div>
       
-      <div className="components-grid">
-        <LocalStateComponent />
-        <ReduxComponent />
-        <ContextComponent />
-      </div>
-      
       <footer className="app-footer">
-        <p>Interact with each component to see how different state management approaches work!</p>
+        <div className="legend">
+          <div className="legend-item">
+            <span className="legend-color global"></span>
+            <span>Redux: Global theme state</span>
+          </div>
+          <div className="legend-item">
+            <span className="legend-color context"></span>
+            <span>Context API: Shared visibility in groups</span>
+          </div>
+          <div className="legend-item">
+            <span className="legend-color local"></span>
+            <span>Local State: Individual todo completion</span>
+          </div>
+        </div>
       </footer>
     </div>
   );
@@ -323,11 +387,7 @@ function App() {
 export default function Root() {
   return (
     <Provider store={store}>
-      <ThemeProvider>
-        <UserProvider>
-          <App />
-        </UserProvider>
-      </ThemeProvider>
+      <App />
     </Provider>
   );
 }
